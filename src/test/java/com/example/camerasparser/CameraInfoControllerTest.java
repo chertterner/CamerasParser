@@ -1,10 +1,13 @@
 package com.example.camerasparser;
 
+import com.example.camerasparser.controllers.CameraInfoController;
+import com.example.camerasparser.service.CameraInfoService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -18,14 +21,17 @@ public class CameraInfoControllerTest {
     @Autowired
     MockMvc mockMvc;
 
+    @MockBean
+    CameraInfoService cameraInfoService;
+
     @Before
     public void setUp() throws Exception {
     }
 
     @Test
-    public void getInfo() throws Exception {
+    public void getInfoList() throws Exception {
 
-        mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
+        mockMvc.perform(get("/get")).andExpect(status().isOk());
     }
 
 }
