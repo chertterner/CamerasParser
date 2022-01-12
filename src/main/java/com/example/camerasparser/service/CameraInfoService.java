@@ -4,68 +4,74 @@ import com.example.camerasparser.json.Camera;
 import com.example.camerasparser.json.CameraInfo;
 import com.example.camerasparser.json.SourceDataUrlInfo;
 import com.example.camerasparser.json.TokenDataUrlInfo;
+import lombok.AllArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.logging.*;
+
+
+
 
 @Service
+@AllArgsConstructor
 public class CameraInfoService {
 
-    private RestTemplate restTemplate = new RestTemplate();
+    private static Logger logger;
+    private final RestTemplate restTemplate;
 
+    public List<CameraInfo> getResultCameraInfoList() {
 
-    public List<CameraInfo> getResultCameraInfoList() throws URISyntaxException, MalformedURLException {
-
-        Camera[] cameras = getCameras();
-
-        return getCameraInfoList(cameras);
+            return getCameraInfoList(Objects.requireNonNull(getCameras()));
 
     }
 
-    public Camera[] getCameras() throws MalformedURLException, URISyntaxException {
+    @Nullable
+    public Camera[] getCameras() {
 
-        URL url = new URL("http://www.mocky.io/v2/5c51b9dd3400003252129fb5");
+        try {
 
-        return restTemplate.getForObject(url.toURI(), Camera[].class);
+            return getObjectFromRestTemplate(new URL("http://www.mocky.io/v2/5c51b9dd3400003252129fb5"),
+                    Camera[].class);
+
+        } catch(MalformedURLException exception) {
+
+            logger.log(Level.WARNING, "In getCameras method of CameraInfoService class ", exception);
+        }
+
+        return null;
     }
 
-    public SourceDataUrlInfo getSourceDataUrlInfo(URL url) throws URISyntaxException {
+    public SourceDataUrlInfo getSourceDataUrlInfo(URL url) {
 
-        return restTemplate.getForObject(url.toURI(), SourceDataUrlInfo.class);
+        return getObjectFromRestTemplate(url, SourceDataUrlInfo.class);
+
     }
 
-    public TokenDataUrlInfo getTokenDataUrlInfo(URL url) throws URISyntaxException {
+    public TokenDataUrlInfo getTokenDataUrlInfo(URL url) {
 
-        return restTemplate.getForObject(url.toURI(), TokenDataUrlInfo.class);
+        return getObjectFromRestTemplate(url, TokenDataUrlInfo.class);
+
     }
 
     public List<CameraInfo> getCameraInfoList(Camera[] cameras) {
 
-        return Stream.of(cameras).parallel().map(camera -> {
+        return Stream.of(cameras).parallel().map(camera -> getFilledCameraInfo(camera, getSourceDataUrlInfo(
+                camera.getSourceDataUrl()), getTokenDataUrlInfo(camera.getTokenDataUrl()))).collect(Collectors.toList());
 
-            CameraInfo cameraInfo = new CameraInfo();
-
-            try {
-
-                cameraInfo = getFilledCameraInfo(camera, getSourceDataUrlInfo(camera.getSourceDataUrl()),
-                        getTokenDataUrlInfo(camera.getTokenDataUrl()));
-
-            } catch (URISyntaxException e) {
-                e.printStackTrace();
-            }
-
-            return cameraInfo;
-
-        }).collect(Collectors.toList());
     }
 
-    public CameraInfo getFilledCameraInfo(Camera camera, SourceDataUrlInfo sourceDataUrlInfo, TokenDataUrlInfo tokenDataUrlInfo) {
+    public CameraInfo getFilledCameraInfo(Camera camera, SourceDataUrlInfo sourceDataUrlInfo,
+                                          TokenDataUrlInfo tokenDataUrlInfo) {
 
         CameraInfo cameraInfo = new CameraInfo();
         cameraInfo.setId(camera.getId());
@@ -76,4 +82,24 @@ public class CameraInfoService {
 
         return cameraInfo;
     }
+
+
+    private URI getURIFromURL(URL url) {
+
+        try {
+            return url.toURI();
+        } catch (URISyntaxException exception) {
+
+            logger.log(Level.WARNING,"In getURIFromURL method of CameraInfoService class ", exception);
+        }
+
+        return null;
+    }
+
+    private <T> T getObjectFromRestTemplate(URL url, Class<T> tClass) {
+
+        return restTemplate.getForObject(Objects.requireNonNull(getURIFromURL(url)), tClass);
+    }
+
+
 }
